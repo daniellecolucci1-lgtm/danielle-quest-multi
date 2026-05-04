@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Danielle's Quest</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a1a;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Press Start 2P',monospace;overflow:hidden;touch-action:none}
+#wrapper{position:relative;width:480px;height:540px;max-width:100vw}
+canvas{display:block;width:480px;height:480px;max-width:100vw;image-rendering:pixelated;cursor:pointer}
+#ui{width:480px;max-width:100vw;background:#0d0d2b;border:3px solid #5a5aff;border-top:none;padding:5px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+#xp-bar-wrap{flex:1;background:#1a1a3a;border:2px solid #5a5aff;height:12px;position:relative}
+#xp-bar{height:100%;background:#ffe066;transition:width 0.4s}
+#xp-label{font-size:5px;color:#ffe066;white-space:nowrap}
+#level-label{font-size:5px;color:#5aff5a;white-space:nowrap}
+.overlay{position:absolute;top:0;left:0;width:100%;height:480px;background:rgba(10,10,26,0.97);display:none;flex-direction:column;align-items:center;justify-content:center;padding:12px;text-align:center;z-index:10;overflow-y:auto}
+.overlay.active{display:flex}
+.pbox{border:4px solid #5a5aff;box-shadow:0 0 0 3px #0a0a1a,0 0 0 6px #5a5aff;background:#0d0d2b;padding:16px;width:100%;max-width:440px;text-align:center}
+h1{font-size:9px;color:#ffe066;line-height:2;letter-spacing:2px}
+h2{font-size:7px;color:#ffe066;margin-bottom:10px}
+.sub{font-size:6px;color:#a0a0cc;line-height:2.2;margin:5px 0}
+.btn{font-family:'Press Start 2P',monospace;font-size:6px;background:#1a1a3a;color:#ffe066;border:3px solid #ffe066;padding:7px 14px;cursor:pointer;margin:5px 4px;letter-spacing:1px}
+.btn:hover,.btn:active{background:#ffe066;color:#0a0a1a}
+.btn.g{border-color:#5aff5a;color:#5aff5a}
+.btn.g:hover,.btn.g:active{background:#5aff5a;color:#0a0a1a}
+.npc-name{font-size:6px;color:#5aff5a;margin-bottom:6px}
+.npc-say{font-size:5px;color:#e0e0ff;line-height:2.2;margin-bottom:10px;text-align:left}
+.choice-btn{font-family:'Press Start 2P',monospace;font-size:5px;background:#1a1a3a;color:#a0c0ff;border:2px solid #5a5aff;padding:7px 8px;cursor:pointer;margin:4px 0;display:block;width:100%;text-align:left;line-height:2}
+.choice-btn:hover,.choice-btn:active{background:#5a5aff;color:#fff}
+.result-good{font-size:6px;color:#5aff5a;line-height:2;margin:6px 0}
+.result-bad{font-size:6px;color:#ff9966;line-height:2;margin:6px 0}
+.xp-pop{font-size:7px;color:#ffe066;margin:5px 0}
+.stat-row{display:flex;justify-content:space-between;font-size:5px;padding:4px 0;border-bottom:1px solid #1a1a3a;color:#c0c0ee}
+.stat-v{color:#ffe066}
+.badge{display:inline-block;font-size:5px;background:#1a1a3a;border:2px solid #5a5aff;color:#a0c0ff;padding:3px 6px;margin:2px}
+.screen-mock{background:#111;border:3px solid #5a5aff;border-radius:4px;padding:10px;margin:8px 0;text-align:left;font-family:Arial,sans-serif}
+.screen-mock .header{font-size:8px;font-weight:bold;color:#ffe066;margin-bottom:6px;font-family:'Press Start 2P',monospace}
+.doc-line{font-size:9px;color:#ccc;line-height:1.6;margin:2px 0}
+.doc-bold{font-weight:bold;color:#fff}
+.msg-bubble{background:#1a3a5a;border-radius:8px;padding:8px;margin:5px 0;font-size:9px;color:#a0d0ff;line-height:1.6;text-align:left}
+.msg-sender{font-size:8px;font-weight:bold;margin-bottom:3px}
+.teams-header{background:#2a1a5a;padding:6px 8px;border-radius:4px 4px 0 0;margin:-10px -10px 8px;font-size:8px;color:#c0a0ff;font-weight:bold}
+.meta-card{background:#1a2a3a;border:2px solid #5a5aff;border-radius:4px;padding:8px;margin:4px 0;text-align:left}
+.meta-card .card-title{font-size:7px;color:#5aff5a;font-family:'Press Start 2P',monospace;margin-bottom:4px}
+.meta-card .card-body{font-size:8px;color:#c0d0e0;line-height:1.6}
+#dpad{position:absolute;bottom:55px;right:6px;display:none;width:88px;height:88px;z-index:5}
+#dpad button{position:absolute;width:27px;height:27px;background:#1a1a3a;border:2px solid #5a5aff;color:#5a5aff;font-size:10px;cursor:pointer;border-radius:3px;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;touch-action:none}
+#dpad button:active{background:#5a5aff;color:#fff}
+#btn-up{top:0;left:30px}#btn-down{bottom:0;left:30px}#btn-left{top:30px;left:0}#btn-right{top:30px;right:0}
+</style>
+</head>
+<body>
+<div id="wrapper">
+<canvas id="c" width="480" height="480"></canvas>
+<div id="ui">
+  <span id="level-label">LV 1</span>
+  <div id="xp-bar-wrap"><div id="xp-bar" style="width:0%"></div></div>
+  <span id="xp-label">0 XP</span>
+</div>
+<div id="dpad">
+  <button id="btn-up">▲</button>
+  <button id="btn-left">◀</button>
+  <button id="btn-right">▶</button>
+  <button id="btn-down">▼</button>
+</div>
+
+<!-- TITLE -->
+<div class="overlay active" id="ov-title">
+  <div class="pbox">
+    <div style="font-size:30px;margin-bottom:6px">🧝‍♀️</div>
+    <h1>DANIELLE'S QUEST</h1>
+    <div class="sub" style="color:#5aff5a">CREATOR OF BRAND EXPERIENCES<br>AVAILABLE FOR HIRE</div>
+    <div class="sub">Walk the world. Make the right calls.<br>Earn XP that proves you're the hire.</div>
+    <button class="btn g" onclick="startGame()">▶ PRESS START</button>
+    <div class="sub" style="margin-top:8px">WASD/ARROWS or TAP TO MOVE<br>WALK INTO GLOWING OBJECTS TO INTERACT</div>
+  </div>
+</div>
+
+<!-- LEVEL INTRO -->
+<div class="overlay" id="ov-intro">
+  <div class="pbox">
+    <div id="intro-emoji" style="font-size:28px;margin-bottom:6px"></div>
+    <h2 id="intro-title"></h2>
+    <div id="intro-sub" class="sub"></div>
+    <div id="intro-body" class="sub"></div>
+    <button class="btn g" onclick="closeIntro()">▶ START</button>
+  </div>
+</div>
+
+<!-- DIALOGUE -->
+<div class="overlay" id="ov-dialog">
+  <div class="pbox" style="max-height:460px;overflow-y:auto">
+    <div class="npc-name" id="dlg-name"></div>
+    <div id="dlg-content"></div>
+    <div id="dlg-choices" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div class="overlay" id="ov-result">
+  <div class="pbox">
+    <div id="res-icon" style="font-size:24px;margin-bottom:6px"></div>
+    <div id="res-text"></div>
+    <div id="res-xp" class="xp-pop"></div>
+    <div id="res-extra" style="margin-top:8px"></div>
+    <button class="btn g" onclick="closeResult()">▶ CONTINUE</button>
+  </div>
+</div>
+
+<!-- LEVEL UP -->
+<div class="overlay" id="ov-levelup">
+  <div class="pbox">
+    <div style="font-size:24px;margin-bottom:6px">⬆️</div>
+    <h2>LEVEL COMPLETE!</h2>
+    <div id="lu-text" class="sub"></div>
+    <button class="btn g" onclick="advanceLevel()">▶ NEXT JOB</button>
+  </div>
+</div>
+
+<!-- BOSS -->
+<div class="overlay" id="ov-boss">
+  <div class="pbox" style="max-height:460px;overflow-y:auto">
+    <div class="sub" style="color:#ff5a5a;margin-bottom:4px">⚠ FINAL BOSS</div>
+    <div style="display:flex;justify-content:space-around;margin:6px 0;align-items:flex-end">
+      <div style="text-align:center">
+        <div style="font-size:28px">👔</div>
+        <div style="font-size:5px;color:#a0a0cc">HIRING MGR</div>
+        <div style="background:#1a1a3a;border:2px solid #5a5aff;height:11px;width:90px;margin-top:3px;position:relative">
+          <div id="boss-bar" style="height:100%;background:#ff5a5a;width:100%;transition:width 0.4s"></div>
+          <span style="position:absolute;right:2px;top:50%;transform:translateY(-50%);font-size:5px;color:#fff" id="boss-hp-txt">100</span>
+        </div>
+      </div>
+      <div style="font-size:7px;color:#ffe066">VS</div>
+      <div style="text-align:center">
+        <div style="font-size:28px">🧝‍♀️</div>
+        <div style="font-size:5px;color:#a0a0cc">DANIELLE</div>
+        <div style="background:#1a1a3a;border:2px solid #5a5aff;height:11px;width:90px;margin-top:3px;position:relative">
+          <div id="hero-bar" style="height:100%;background:#5aff5a;width:100%;transition:width 0.4s"></div>
+          <span style="position:absolute;right:2px;top:50%;transform:translateY(-50%);font-size:5px;color:#fff" id="hero-hp-txt">100</span>
+        </div>
+      </div>
+    </div>
+    <div id="boss-msg" style="font-size:6px;color:#ffe066;min-height:20px;margin:6px 0;line-height:2"></div>
+    <div id="boss-btns">
+      <button class="choice-btn" onclick="bossMove('exp')">⚔ Cite 7+ yrs across copy, production & social</button>
+      <button class="choice-btn" onclick="bossMove('budget')">💰 Flex the $3M/mo budget track record</button>
+      <button class="choice-btn" onclick="bossMove('client')">🤝 Reference multi-brand portfolio onboarding</button>
+      <button class="choice-btn" onclick="bossMove('vision')">✨ Pitch your vision: experiences that drive ROI</button>
+    </div>
+    <div id="boss-log" style="font-size:5px;color:#8080aa;line-height:1.8;margin-top:4px"></div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="overlay" id="ov-stats">
+  <div class="pbox">
+    <div style="font-size:24px;margin-bottom:6px">🏆</div>
+    <h1>BOSS DEFEATED!</h1>
+    <div id="stats-list" style="width:100%;margin:8px 0"></div>
+    <div style="margin:8px 0">
+      <div style="font-size:5px;color:#ffe066;margin-bottom:5px">SKILLS UNLOCKED</div>
+      <div id="badges-out"></div>
+    </div>
+    <button class="btn g" onclick="showOv('ov-hire')">▶ CLAIM REWARD</button>
+  </div>
+</div>
+
+<!-- HIRE -->
+<div class="overlay" id="ov-hire">
+  <div class="pbox">
+    <div style="font-size:24px;margin-bottom:6px">🎉</div>
+    <h1>YOU FOUND<br>THE HERO.</h1>
+    <div class="sub" style="color:#5aff5a;margin:8px 0">DANIELLE COLUCCI<br>CREATOR OF BRAND EXPERIENCES</div>
+    <div style="width:100%;margin:8px 0">
+      <div class="stat-row"><span>EMAIL</span><span class="stat-v" style="font-size:5px">daniellecolucci1@gmail.com</span></div>
+      <div class="stat-row"><span>PHONE</span><span class="stat-v">317-764-6086</span></div>
+      <div class="stat-row"><span>LINKEDIN</span><span class="stat-v" style="font-size:5px">linkedin.com/in/danielle-colucci-75150353</span></div>
+    </div>
+    <div class="sub" style="margin:8px 0">Ready to concept, produce, and deliver<br>memorable experiences that drive ROI<br>for the brand and the audience.<br><span style="color:#ffe066">The quest starts at Your Company.</span></div>
+    <button class="btn g" onclick="location.reload()">↩ PLAY AGAIN</button>
+  </div>
+</div>
+</div><!-- /wrapper -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  CUSTOMIZE FOR A SPECIFIC APPLICATION — change these 2 lines:
+//    COMPANY_NAME: e.g. "Waymo" — shows on hire screen finale
+//    ROLE_TITLE:   e.g. "Experiential Marketing Manager"
+//  For the generic version, leave both as empty strings "".
+// ═══════════════════════════════════════════════════════════════
+const COMPANY_NAME = "";
+const ROLE_TITLE   = "";
+
+// ── Auto-patch hire screen if company/role provided ──
+window.addEventListener('DOMContentLoaded', () => {
+  if (COMPANY_NAME) {
+    document.querySelector('#ov-hire .sub:last-of-type').innerHTML =
+      `Ready to concept, produce, and deliver<br>memorable experiences that drive ROI<br>for the brand and the audience.<br><span style="color:#ffe066">The quest starts at ${COMPANY_NAME}.</span>`;
+  }
+  if (ROLE_TITLE) {
+    document.querySelector('#ov-hire .sub[style*="5aff5a"]').innerHTML =
+      `DANIELLE COLUCCI<br>${ROLE_TITLE.toUpperCase()}`;
+    document.querySelector('#ov-title .sub[style*="5aff5a"]').innerHTML =
+      `CREATOR OF BRAND EXPERIENCES<br><span style="color:#a0a0cc;font-size:5px">CANDIDATE: ${ROLE_TITLE.toUpperCase()}</span>`;
+  }
+});
+
+const C=document.getElementById('c'),ctx=C.getContext('2d');
+const W=480,H=480,TS=32;
+
+let xp=0,totalXP=0,currentLevel=0,bossHP=100,heroHP=100,bossRound=0,skills=[];
+const XP_MAX=400;
+
+let P={x:240,y:280,speed:2.4,frame:0,ft:0,dir:1};
+let keys={},touchTarget=null,pendingAdvance=false,levelData=null;
+
+function showOv(id){document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function hideOv(){document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('active'));}
+function addXP(v){xp+=v;totalXP+=v;updateXPBar();}
+function updateXPBar(){
+  document.getElementById('xp-bar').style.width=Math.min(100,(xp/XP_MAX)*100)+'%';
+  document.getElementById('xp-label').textContent=totalXP+' XP';
+}
+
+const LEVELS=[
+  {
+    name:"DEFENDERS SECURITY",sub:"Event Coordination Intern · 2013",
+    emoji:"🏛️",intro:"Your first real gig. A security company's conference room. You're the intern everyone underestimates — but not for long.",
+    roomType:"conference",
+    objects:[
+      {id:'proj',x:7,y:2,label:'📽️',tip:'PROJECTOR SCREEN',
+        dialog:{name:"SUPERVISOR KAREN",
+          content:`<div class="npc-say">The conference is in 3 days and the print shop says they need 48 hrs minimum for the training materials. Half the materials aren't even finalized yet. What do you do?</div>`,
+          choices:[
+            {text:"Tell Karen we can't hit the deadline and wait for her to decide next steps.",bad:true,feedback:"Bringing a problem without any groundwork signals low initiative. A coordinator brings options, not just bad news.",xp:50},
+            {text:"Research same-day print options nearby, get quotes, flag the finalization gap to Karen, and present 2 solutions with costs by EOD.",bad:false,feedback:"Resourcefulness + proactive communication. You find options and present them clearly before escalating. That's coordinator instinct.",xp:160,skill:"Resourcefulness"}
+          ]}
+      },
+      {id:'conf',x:3,y:7,label:'🎤',tip:'CONFERENCE STAGE',
+        dialog:{name:"EVENT STAFF MEMBER",
+          content:`<div class="npc-say">Two keynote speakers are double-booked in the same room. The conference starts in 20 minutes. They're both here and neither will budge.</div>`,
+          choices:[
+            {text:"Apologize to both, flip a coin to pick who stays, move the other to a hallway area.",bad:true,feedback:"Improvising without a real plan and disrespecting a keynote speaker escalates fast. There's always a structural solution.",xp:55},
+            {text:"Check if a nearby breakout room can be reconfigured, stagger start times by 15 mins, and personally escort both speakers.",bad:false,feedback:"Calm, resourceful, stakeholder-aware. You assessed available space and managed both speakers personally. That's on-site event instinct.",xp:160,skill:"On-Site Execution"}
+          ]}
+      },
+      {id:'door',x:7,y:13,label:'🚪',tip:'EXIT → NEXT JOB',advance:true}
+    ]
+  },
+  {
+    name:"A SEPARATE ENTITY",sub:"Production Coordinator · 2019",
+    emoji:"🎬",intro:"A real commercial set. You're coordinating production for Microsoft, Lenovo and Intel. The cameras roll whether you're ready or not.",
+    roomType:"tvset",
+    objects:[
+      {id:'clap',x:3,y:3,label:'🎬',tip:'CLAPPERBOARD',
+        dialog:{name:"DIRECTOR",
+          content:`<div class="npc-say">The Microsoft spot needs a tagline for the final scene. Director wants something that feels 'human but cutting-edge — like technology that actually cares.' You have 10 minutes before the next take.</div>`,
+          choices:[
+            {text:"'Built for people. Powered by Microsoft.' — safe, clean, covers the brief.",bad:true,feedback:"Technically correct but forgettable. A safe tagline in a creative pitch room signals you played it safe — not that you pushed the idea further.",xp:55},
+            {text:"'For every what if, there's a Microsoft.' — opens with human curiosity, closes with the brand.",bad:false,feedback:"Leads with emotion, earns the brand name at the end. That's how great copy works — it makes the audience feel something before it sells anything.",xp:165,skill:"Copywriting"}
+          ]}
+      },
+      {id:'sched',x:11,y:5,label:'📅',tip:'SHOOT SCHEDULE',
+        dialog:{name:"DIRECTOR",
+          content:`<div class="npc-say">The talent's availability just changed — they can only shoot until 4pm instead of 6pm. You have 3 scenes left that were scheduled for the 4–6pm block. What do you do?</div>`,
+          choices:[
+            {text:"Cut the 2 least important scenes and shoot the most critical one before 4pm.",bad:true,feedback:"Cutting scenes unilaterally is a creative and contractual decision above a coordinator's authority. Always bring options before cutting.",xp:55},
+            {text:"Reassess each scene's setup time, flag which 1–2 scenes could be rescheduled vs. prioritized, and bring the director a revised schedule with trade-off notes within 15 mins.",bad:false,feedback:"Scheduling problem-solving requires surfacing trade-offs, not making creative calls for the director. Fast, structured options are exactly what's needed.",xp:160,skill:"Production Scheduling"}
+          ]}
+      },
+      {id:'door',x:7,y:13,label:'🚪',tip:'EXIT → NEXT JOB',advance:true}
+    ]
+  },
+  {
+    name:"ENSEMBLE DIGITAL STUDIOS",sub:"Account Coordinator · 2019–2020",
+    emoji:"🗽",intro:"Agency life. You're writing copy for Laura Clery, ghostwriting a published book, and pitching Fortune 500 brands. Every word matters.",
+    roomType:"nyc",
+    objects:[
+      {id:'pc',x:3,y:3,label:'💻',tip:'CLOROX BRIEF',
+        dialog:{name:"TALENT CREATIVE CALL — LAURA CLERY",
+          content:`<div class="screen-mock"><div class="header">📄 CREATIVE BRIEF — CLOROX</div><div class="doc-line"><span class="doc-bold">Campaign:</span> Clean Feels Good</div><div class="doc-line"><span class="doc-bold">Goal:</span> Drive awareness of Clorox Scentiva among millennial women</div><div class="doc-line"><span class="doc-bold">Tone:</span> Fresh, uplifting, aspirational — NOT clinical</div><div class="doc-line"><span class="doc-bold">CTA:</span> Product in natural home environment</div></div><div class="msg-bubble"><div class="msg-sender">💬 @lifestyle_maya</div>ok so I read the Clorox brief... I'm drawing a blank on how to make this feel real and not like an ad. What's the concept?</div>`,
+          choices:[
+            {text:"Tell Maya to just show herself cleaning and talking about the scent — keep it simple and authentic.",bad:true,feedback:"Too generic. The brief specifically calls for aspirational and fresh — a cleaning montage won't differentiate and likely won't get approved.",xp:50},
+            {text:"Suggest Maya frame it around a 'reset ritual' — post-busy-week refresh energy, Scentiva as part of her Sunday reset — product featured naturally, not held up to camera.",bad:false,feedback:"You translated the brief into a real creative angle that fits Maya's voice AND hits Clorox's tone goals. That's account + creative thinking in one.",xp:160,skill:"Creative Strategy"}
+          ]}
+      },
+      {id:'coffee',x:11,y:5,label:'📖',tip:'GHOSTWRITING PROJECT',
+        dialog:{name:"THE KING OF RANDOM — BOOK PROJECT",
+          content:`<div class="screen-mock"><div class="header">📚 GHOSTWRITING BRIEF — 52 Random Weekend Projects</div><div class="doc-line"><span class="doc-bold">Creator:</span> The King of Random — 7M+ YouTube subscribers</div><div class="doc-line"><span class="doc-bold">Your role:</span> Contributing ghostwriter. Your chapter intro needs to sound exactly like Grant — not like you.</div><div class="doc-line"><span class="doc-bold">Grant's voice:</span> Curious, enthusiastic, encouraging. Speaks directly to the reader like a friend who just discovered something cool. Never academic.</div></div><div class="npc-say" style="margin-top:8px">Two chapter intro options. Which one sounds like Grant?</div>`,
+          choices:[
+            {text:"'In this chapter, we will explore a fascinating weekend project that challenges your creativity and builds practical skills through hands-on experimentation.'",bad:true,feedback:"That sounds like a textbook, not a YouTuber with 7 million subscribers. Ghostwriting means disappearing completely into someone else's voice.",xp:55},
+            {text:"'Okay, so I was messing around in my garage last weekend and I thought — what if you could build this in an afternoon? Turns out, you absolutely can. Let's get into it.'",bad:false,feedback:"That's Grant. Conversational, immediate, inviting. The best ghostwriting is invisible — the reader never questions whose voice it is.",xp:165,skill:"Ghostwriting"}
+          ]}
+      },
+      {id:'door',x:7,y:13,label:'🚪',tip:'EXIT → NEXT JOB',advance:true}
+    ]
+  },
+  {
+    name:"CMG WORLDWIDE",sub:"Social Media Manager & Marketing Intern · 2018",
+    emoji:"🎵",intro:"You're managing 50+ social accounts for deceased cultural icons. Aaliyah. Malcolm X. Andre the Giant. Lou Gehrig. Every caption has to honor their legacy — and sound exactly like them.",
+    roomType:"office_blue",
+    objects:[
+      {id:'laptop',x:3,y:3,label:'💻',tip:"AALIYAH'S ACCOUNT",
+        dialog:{name:"CMG CONTENT CALENDAR — AALIYAH",
+          content:`<div class="screen-mock"><div class="header">🎵 AALIYAH — Instagram Post · Anniversary of One in a Million</div><div class="doc-line"><span class="doc-bold">Account voice:</span> Timeless, ethereal, deeply human. Never trendy. Speaks from a place of love and quiet confidence.</div><div class="doc-line"><span class="doc-bold">Context:</span> 26th anniversary of the album. Fans are already posting. The estate wants something that feels personal, not corporate.</div></div><div class="npc-say" style="margin-top:8px">Two options on the table. Which caption honors the legacy?</div>`,
+          choices:[
+            {text:"'Happy anniversary to One in a Million — an album that defined a generation. Stream it now. #Aaliyah #OneInAMillion'",bad:true,feedback:"'Stream it now' turns a legacy moment into a marketing prompt. Her accounts need to feel like she's still in the room, not like a brand page pushing content.",xp:55},
+            {text:"'26 years and it still sounds like the first time. Some things don't age — they just become timeless. 🤍 #Aaliyah'",bad:false,feedback:"That's her voice. Quiet, confident, emotional without trying too hard. Writing for legacy accounts means disappearing into who they were.",xp:165,skill:"Brand Voice"}
+          ]}
+      },
+      {id:'phone',x:11,y:4,label:'📰',tip:'PRESS RELEASE',
+        dialog:{name:"CMG COMMUNICATIONS TASK",
+          content:`<div class="screen-mock"><div class="header">📰 PRESS RELEASE DRAFT — WOW Licensing Deal</div><div class="doc-line"><span class="doc-bold">Task:</span> Write the opening paragraph announcing CMG's new licensing partnership with Jeanie Buss for Women of Wrestling.</div><div class="doc-line"><span class="doc-bold">Tone:</span> Professional, newsworthy, punchy. Needs to get picked up by licensing trade publications.</div></div><div class="npc-say" style="margin-top:8px">Two opening paragraphs. Which one gets picked up?</div>`,
+          choices:[
+            {text:"'CMG Worldwide is pleased to announce a new licensing partnership with Jeanie Buss for Women of Wrestling. This exciting deal will expand the WOW brand across multiple categories.'",bad:true,feedback:"'Pleased to announce' is PR filler that journalists skip instantly. A press release that doesn't lead with the news doesn't get placed — it gets deleted.",xp:55},
+            {text:"'CMG Worldwide has secured licensing representation for Women of Wrestling (WOW), the all-female professional wrestling league founded by Jeanie Buss — bringing the brand's growing cultural momentum into new consumer categories.'",bad:false,feedback:"Leads with the news, names the who and what immediately, and gives journalists the angle in one sentence. That's how you write copy that actually gets placed.",xp:160,skill:"Press & Communications"}
+          ]}
+      },
+      {id:'door',x:7,y:13,label:'🚪',tip:'EXIT → NEXT JOB',advance:true}
+    ]
+  },
+  {
+    name:"SPARK FOUNDRY",sub:"Paid Social Manager · 2021–Present",
+    emoji:"💎",intro:"Your current arena. $1–3M monthly budgets. Six brands. Every decision is a data point. Every client call is a chance to build trust — or lose it.",
+    roomType:"office_purple",
+    objects:[
+      {id:'meta',x:3,y:3,label:'💰',tip:'BUDGET DASHBOARD',
+        dialog:{name:"SENIOR LEADERSHIP",
+          content:`<div class="npc-say">It's month-end. One brand is $80K underspent due to a platform issue. Leadership wants to know if we can absorb it in another brand's campaign before EOD.</div>`,
+          choices:[
+            {text:"Say you'll look into it tomorrow — month-end reports are already filed.",bad:true,feedback:"End-of-month budget flexibility is exactly when managers need fast, accurate answers. Deferring signals disengagement from the work you're responsible for.",xp:50},
+            {text:"Pull the budget tracker, assess which running campaigns have capacity and strongest performance, and bring a recommendation to leadership within the hour.",bad:false,feedback:"Budget agility + senior stakeholder management under pressure. Fast, structured, decisive — exactly what a senior manager is hired for.",xp:170,skill:"Strategic Thinking"}
+          ]}
+      },
+      {id:'teams',x:11,y:4,label:'🖥️',tip:'CLIENT TEAMS CALL',
+        dialog:{name:"JARED JEWELERS — CLIENT TEAMS CALL",
+          content:`<div class="screen-mock"><div class="teams-header">📹 Microsoft Teams — Jared Weekly Sync</div><div class="msg-bubble"><div class="msg-sender">👤 Jared Client</div>Honestly, it's been tough keeping track of all the deliverables we need to get to your team. We're dropping things and I know it's causing delays.</div></div>`,
+          choices:[
+            {text:"'I hear you, that's really tough — we appreciate you flagging it.' (move on to next agenda item)",bad:true,feedback:"Sympathizing and moving on wastes a real opportunity to solve a workflow problem that's costing both teams time.",xp:45,isFollow:false},
+            {text:"Ask more questions to understand exactly where the deliverable tracking breaks down for them.",bad:false,feedback:"",xp:0,isFollow:true}
+          ]}
+      },
+      {id:'door',x:7,y:13,label:'🚪',tip:'EXIT → FACE THE BOSS',advance:true}
+    ]
+  }
+];
+
+const FOLLOW_DIALOG={
+  content:`<div class="screen-mock"><div class="teams-header">📹 Microsoft Teams — Jared Weekly Sync</div><div class="msg-bubble"><div class="msg-sender">👤 Jared Client</div>Honestly, it's been tough keeping track of all the deliverables we need to get to your team. We're dropping things and I know it's causing delays.</div><div class="msg-bubble" style="background:#1a3a1a;color:#a0ffa0;text-align:right"><div class="msg-sender">🧝‍♀️ You</div>Can you tell me more about where the breakdown happens? Is it knowing what's due, when it's due, or knowing where to send it?</div><div class="msg-bubble"><div class="msg-sender">👤 Jared Client</div>Mostly knowing what's due and when — we have no single place to track it and we end up scrambling through old emails.</div></div><div class="npc-say" style="margin-top:6px">Now that you understand the problem — what do you propose?</div><div class="meta-card"><div class="card-title" style="color:#ff9966">OPTION 1</div><div class="card-body">Build Jared a shared spreadsheet they manage on their end, with a column per deliverable they fill in daily. Requires ~30 min/day of extra work from their team.</div></div><div class="meta-card"><div class="card-title" style="color:#5aff5a">OPTION 2</div><div class="card-body">Build an automated table into our existing Excel workstream that auto-populates deliverable deadlines. Our team adds it to the shared doc (20 min one-time build). Jared's team checks one column — 2 min/day.</div></div>`,
+  choices:[
+    {text:"Option 1 — shared spreadsheet Jared manages. Clear ownership on their side.",bad:true,feedback:"Putting 30 min/day of overhead on the client to solve a workflow problem you can fix on your end isn't a great look. The best solutions reduce client lift, not increase it.",xp:55},
+    {text:"Option 2 — automated deliverable table built into our workstream. 20 min from me, 2 min/day from them.",bad:false,feedback:"Client-first problem solving. You owned the build, minimized their lift, and used a tool you already control. That's the kind of proactive workflow thinking that builds long-term trust.",xp:170,skill:"Project Management"}
+  ]
+};
+
+function drawRoom(){
+  const rt=levelData.roomType;
+  if(rt==='conference') drawConferenceRoom();
+  else if(rt==='tvset') drawTVSet();
+  else if(rt==='nyc') drawNYCOffice();
+  else if(rt==='office_blue') drawOfficeBlue();
+  else if(rt==='office_purple') drawOfficePurple();
+}
+
+function roomBase(floor,wall,trim){
+  ctx.fillStyle=floor;ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(255,255,255,0.03)';ctx.lineWidth=1;
+  for(let x=0;x<W;x+=TS){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=TS){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  ctx.fillStyle=wall;ctx.fillRect(0,0,W,2*TS);
+  ctx.fillStyle=trim;ctx.fillRect(0,2*TS-3,W,4);
+  ctx.fillStyle='#1a1a2e';ctx.fillRect(0,14*TS,W,2*TS);
+  ctx.fillStyle='#ffe066';ctx.font='bold 7px "Press Start 2P"';ctx.textAlign='center';
+  ctx.fillText(levelData.name,W/2,TS+14);
+  ctx.fillStyle='rgba(160,160,204,0.8)';ctx.font='5px "Press Start 2P"';
+  ctx.fillText(levelData.sub,W/2,TS+26);ctx.textAlign='left';
+}
+
+function drawWindows(color){
+  [[2,4],[8,4],[12,2]].forEach(([gx,gy])=>{
+    const x=gx*TS,y=gy*4;
+    ctx.fillStyle=color||'#87ceeb';ctx.fillRect(x+4,4,TS*2-8,TS-8);
+    ctx.strokeStyle='#5c4a3a';ctx.lineWidth=2;ctx.strokeRect(x+4,4,TS*2-8,TS-8);
+    ctx.beginPath();ctx.moveTo(x+TS+2,4);ctx.lineTo(x+TS+2,TS-4);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x+4,TS/2);ctx.lineTo(x+2*TS-4,TS/2);ctx.stroke();
+  });
+}
+
+function drawConferenceRoom(){
+  roomBase('#1a1a2e','#0f3460','#5a5aff');
+  drawWindows('#87ceeb');
+  ctx.fillStyle='#5c4a3a';rr(3*TS,4*TS,9*TS,5*TS,6);
+  ctx.fillStyle='#6b5a4a';ctx.fillRect(3*TS+6,4*TS+4,9*TS-12,8);
+  const chairColor='#2a2a5a';
+  [3.5,5,6.5,8,9.5,11].forEach(cx=>{
+    ctx.fillStyle=chairColor;rr(cx*TS,3.2*TS,TS*0.8,TS*0.7,3);
+    rr(cx*TS,9.2*TS,TS*0.8,TS*0.7,3);
+  });
+  ctx.fillStyle='#e0e0e0';ctx.fillRect(6*TS,2*TS+5,3*TS,TS*1.2);
+  ctx.fillStyle='#c0c0d0';ctx.fillRect(6*TS+4,2*TS+9,3*TS-8,TS-8);
+  ctx.fillStyle='#5a5aff';ctx.font='5px "Press Start 2P"';ctx.textAlign='center';
+  ctx.fillText('MOMENTUM',7.5*TS,2*TS+20);ctx.textAlign='left';
+  ctx.fillStyle='#4a3728';rr(7*TS,10.5*TS,TS,TS,4);
+  drawPlant(1,2);drawPlant(13,2);
+}
+
+function drawTVSet(){
+  roomBase('#1c1212','#2a1500','#ff6600');
+  ctx.fillStyle='#0d0d0d';ctx.fillRect(0,2*TS,W,12*TS);
+  ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;
+  for(let x=0;x<W;x+=TS){ctx.beginPath();ctx.moveTo(x,2*TS);ctx.lineTo(x,14*TS);ctx.stroke();}
+  ctx.fillStyle='#222';rr(2*TS,5*TS,TS*1.5,TS,4);
+  ctx.fillStyle='#333';rr(2*TS+4,5*TS+4,TS*1.2,TS-8,3);
+  ctx.fillStyle='#111';ctx.fillRect(3.5*TS,5.5*TS,8,12);
+  ctx.fillStyle='#555';ctx.fillRect(2.2*TS,6*TS,TS*0.8,4);
+  ctx.fillStyle='#444';
+  ctx.beginPath();ctx.moveTo(2.3*TS,6*TS+4);ctx.lineTo(TS+8,8*TS);ctx.lineTo(3.8*TS,8*TS);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#1a0a00';rr(5*TS,4*TS,5*TS,5*TS,4);
+  ctx.fillStyle='#2a1400';ctx.fillRect(5*TS+4,4*TS+4,5*TS-8,TS);
+  ctx.fillStyle='#0a1a2a';ctx.fillRect(5.5*TS,4.2*TS,4*TS,3.5*TS);
+  ctx.fillStyle='#1a3a5a';ctx.fillRect(6*TS,4.5*TS,3*TS,TS);
+  [[3,2],[8,2],[12,2]].forEach(([gx,gy])=>{
+    ctx.fillStyle='#333';rr(gx*TS,gy*TS,TS*0.8,TS*0.6,3);
+    ctx.fillStyle='rgba(255,200,100,0.15)';
+    ctx.beginPath();ctx.moveTo(gx*TS+0.4*TS,gy*TS+0.6*TS);
+    ctx.lineTo(gx*TS-TS,6*TS);ctx.lineTo(gx*TS+TS*1.8,6*TS);ctx.closePath();ctx.fill();
+  });
+  ctx.fillStyle='#222';rr(11*TS,4*TS,2.5*TS,2*TS,4);
+  ctx.fillStyle='#00ccaa';ctx.fillRect(11*TS+4,4*TS+4,2.5*TS-8,2*TS-8);
+  ctx.fillStyle='#fff';ctx.font='5px "Press Start 2P"';ctx.textAlign='center';
+  ctx.fillText('LIVE',12.25*TS,5.2*TS);ctx.textAlign='left';
+}
+
+function drawNYCOffice(){
+  roomBase('#0a1a2a','#0a2a1a','#00cc88');
+  [[1,0],[4,0],[7,0],[10,0],[13,0]].forEach(([gx])=>{
+    ctx.fillStyle='#1a3a5a';ctx.fillRect(gx*TS+2,2,TS*2-4,TS-2);
+    ctx.fillStyle='#0a2a3a';
+    const bh=TS*0.3+Math.random()*TS*0.4;
+    ctx.fillRect(gx*TS+4,2,TS*0.6,bh);ctx.fillRect(gx*TS+TS,2,TS*0.7,bh*0.8);
+    ctx.strokeStyle='#00cc88';ctx.lineWidth=1;ctx.strokeRect(gx*TS+2,2,TS*2-4,TS-2);
+  });
+  ctx.fillStyle='#3a2a1a';rr(1*TS,3*TS,4*TS,2*TS,4);
+  ctx.fillStyle='#4a3a2a';ctx.fillRect(TS+4,3*TS+4,4*TS-8,8);
+  [1.5,2.5,3.5].forEach(cx=>{
+    ctx.fillStyle='#6a4a2a';rr(cx*TS,3.5*TS,16,20,3);
+    ctx.fillStyle='#8a6a4a';ctx.fillRect(cx*TS+2,3.5*TS,12,4);
+  });
+  ctx.fillStyle='#5c4a3a';rr(7*TS,4*TS,4*TS,4*TS,6);
+  ctx.fillStyle='#6b5a4a';ctx.fillRect(7*TS+4,4*TS+4,4*TS-8,8);
+  [[7.2,3.2],[9.8,3.2],[7.2,7.8],[9.8,7.8]].forEach(([cx,cy])=>{
+    ctx.fillStyle='#2a3a2a';rr(cx*TS,cy*TS,TS*0.7,TS*0.7,3);
+  });
+  ctx.fillStyle='#222';rr(11*TS,3*TS,2.5*TS,2*TS,4);
+  ctx.fillStyle='#003322';ctx.fillRect(11*TS+4,3*TS+4,2.5*TS-8,2*TS-10);
+  ctx.fillStyle='#00cc88';ctx.font='5px "Press Start 2P"';ctx.textAlign='center';
+  ctx.fillText('NYC',12.25*TS,4.2*TS);ctx.textAlign='left';
+  drawPlant(1,11);drawPlant(13,11);
+}
+
+function drawOfficeBlue(){
+  roomBase('#0a0a1e','#0a1a3a','#4444ff');
+  drawWindows('#aaddff');
+  drawDesk(1,3,3,2,'#2a3a5a','#3a4a6a');drawDesk(10,3,3,2,'#2a3a5a','#3a4a6a');
+  ctx.fillStyle='#1a2a4a';rr(3*TS,8*TS,4*TS,2*TS,6);
+  ctx.fillStyle='rgba(255,255,255,0.05)';rr(3*TS+4,8*TS+4,4*TS-8,TS-8,4);
+  ctx.fillStyle='#1a2a4a';rr(9*TS,8*TS,4*TS,2*TS,6);
+  ctx.fillStyle='#e8e8f0';ctx.fillRect(5*TS,2*TS+4,5*TS,TS*1.3);
+  ctx.strokeStyle='#aaaacc';ctx.lineWidth=2;ctx.strokeRect(5*TS,2*TS+4,5*TS,TS*1.3);
+  ctx.fillStyle='#4444ff';ctx.font='5px "Press Start 2P"';ctx.textAlign='center';
+  ctx.fillText('CMG WORLDWIDE',7.5*TS,2*TS+22);ctx.textAlign='left';
+  drawPlant(1,2);drawPlant(13,2);
+}
+
+function drawOfficePurple(){
+  roomBase('#0d0a1e','#1a0a2e','#aa44ff');
+  drawWindows('#cc88ff');
+  [[1,3],[4,3],[7,3],[10,3]].forEach(([gx,gy])=>{drawDesk(gx,gy,2.5,1.8,'#2a1a4a','#3a2a5a');});
+  ctx.fillStyle='#3a1a5a';rr(1*TS,7*TS,2*TS,TS,4);
+  ctx.fillStyle='#4a2a6a';ctx.fillRect(TS+2,7*TS+4,2*TS-4,6);
+  ctx.fillStyle='#111';rr(5*TS,2*TS+4,5*TS,TS*1.4,4);
+  ctx.fillStyle='#1a0a2e';ctx.fillRect(5*TS+4,2*TS+8,5*TS-8,TS*1.4-12);
+  ctx.fillStyle='#aa44ff';ctx.font='5px "Press Start 2P"';ctx.textAlign='center';
+  ctx.fillText('SPARK FOUNDRY',7.5*TS,2*TS+24);ctx.textAlign='left';
+  ctx.fillStyle='#2a1a3a';rr(10*TS,8*TS,3.5*TS,2.5*TS,8);
+  ctx.fillStyle='rgba(255,255,255,0.05)';rr(10*TS+4,8*TS+4,3.5*TS-8,TS,4);
+  drawPlant(1,9);drawPlant(13,2);
+}
+
+function drawDesk(gx,gy,gw,gh,c1,c2){
+  const x=gx*TS,y=gy*TS,w=gw*TS,h=gh*TS;
+  ctx.fillStyle=c1||'#4a3728';rr(x,y,w,h,4);
+  ctx.fillStyle=c2||'#5c4a3a';ctx.fillRect(x+4,y+4,w-8,6);
+  ctx.fillStyle='#1a3a5a';rr(x+w/2-12,y+4,24,18,2);
+  ctx.fillStyle='#00ccaa';ctx.fillRect(x+w/2-10,y+6,20,12);
+  ctx.fillStyle='#888';ctx.fillRect(x+w/2-3,y+22,6,4);
+}
+
+function drawPlant(gx,gy){
+  const x=gx*TS+TS/2,y=gy*TS+TS/2;
+  ctx.fillStyle='#8b4513';ctx.beginPath();ctx.arc(x,y+10,8,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#2d6a2d';ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(x-8,y+2,7,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(x+8,y+2,7,0,Math.PI*2);ctx.fill();
+}
+
+function rr(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();ctx.fill();
+}
+
+function drawObjects(){
+  if(!levelData) return;
+  levelData.objects.forEach(obj=>{
+    const ox=obj.x*TS,oy=obj.y*TS,near=isNear(obj);
+    if(near){
+      ctx.fillStyle=obj.advance?'rgba(255,224,102,0.22)':'rgba(90,255,90,0.2)';
+      ctx.beginPath();ctx.arc(ox+TS/2,oy+TS/2,TS*0.9,0,Math.PI*2);ctx.fill();
+    }
+    ctx.font=(TS-6)+'px serif';ctx.textAlign='center';
+    ctx.fillText(obj.label,ox+TS/2,oy+TS-4);
+    if(near){
+      ctx.fillStyle='rgba(13,13,43,0.92)';ctx.font='5px "Press Start 2P"';
+      const tw=ctx.measureText(obj.tip).width+14;
+      rr(ox+TS/2-tw/2,oy-20,tw,14,3);
+      ctx.fillStyle=obj.advance?'#ffe066':'#5aff5a';
+      ctx.fillText(obj.tip,ox+TS/2,oy-10);
+    }
+    ctx.textAlign='left';
+  });
+}
+
+function isNear(obj){return Math.abs(P.x-obj.x*TS-TS/2)<TS*1.8&&Math.abs(P.y-obj.y*TS-TS/2)<TS*2;}
+
+function drawPlayer(){
+  const x=P.x,y=P.y;
+  ctx.fillStyle='rgba(0,0,0,0.3)';ctx.beginPath();ctx.ellipse(x,y+14,10,4,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#c8a882';ctx.beginPath();ctx.arc(x,y-8,9,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#5a5aff';ctx.fillRect(x-8,y,16,14);
+  ctx.fillStyle='#2a2a5a';ctx.fillRect(x-7,y+14,6,8);ctx.fillRect(x+1,y+14,6,8);
+  ctx.fillStyle='#3a2a1a';ctx.beginPath();ctx.arc(x,y-10,9,Math.PI,Math.PI*2);ctx.fill();
+  ctx.fillRect(x-9,y-12,18,6);
+  ctx.fillStyle='#fff';ctx.fillRect(x-5,y-9,3,3);ctx.fillRect(x+2,y-9,3,3);
+  ctx.fillStyle='#222';ctx.fillRect(x-4,y-8,2,2);ctx.fillRect(x+3,y-8,2,2);
+}
+
+function collides(nx,ny){
+  if(nx<TS+8||nx>W-TS-8||ny<2*TS+14||ny>14*TS-8) return true;
+  if(nx>1*TS+4&&nx<4*TS-4&&ny>3*TS&&ny<5*TS) return true;
+  if(nx>10*TS+4&&nx<13*TS-4&&ny>3*TS&&ny<5*TS) return true;
+  return false;
+}
+
+document.addEventListener('keydown',e=>{keys[e.key]=true;['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)&&e.preventDefault();});
+document.addEventListener('keyup',e=>{keys[e.key]=false;});
+['up','down','left','right'].forEach(d=>{
+  const b=document.getElementById('btn-'+d);
+  b.addEventListener('touchstart',e=>{e.preventDefault();keys['dp_'+d]=true;},{passive:false});
+  b.addEventListener('touchend',e=>{e.preventDefault();keys['dp_'+d]=false;},{passive:false});
+  b.addEventListener('mousedown',()=>keys['dp_'+d]=true);
+  b.addEventListener('mouseup',()=>keys['dp_'+d]=false);
+});
+C.addEventListener('click',e=>{
+  if(document.querySelector('.overlay.active')) return;
+  const r=C.getBoundingClientRect(),sx=W/r.width,sy=H/r.height;
+  touchTarget={x:(e.clientX-r.left)*sx,y:(e.clientY-r.top)*sy};
+});
+C.addEventListener('touchend',e=>{
+  e.preventDefault();
+  if(document.querySelector('.overlay.active')) return;
+  const r=C.getBoundingClientRect(),t=e.changedTouches[0],sx=W/r.width,sy=H/r.height;
+  touchTarget={x:(t.clientX-r.left)*sx,y:(t.clientY-r.top)*sy};
+},{passive:false});
+
+function startGame(){
+  if('ontouchstart' in window) document.getElementById('dpad').style.display='block';
+  touchTarget=null;keys={};currentLevel=0;
+  levelData=JSON.parse(JSON.stringify(LEVELS[0]));
+  P.x=240;P.y=280;pendingAdvance=false;interactGrace=120;
+  document.getElementById('level-label').textContent='LV 1';
+  updateXPBar();hideOv();requestAnimationFrame(loop);
+}
+
+let interactGrace=0;
+
+function loadLevel(idx){
+  currentLevel=idx;levelData=JSON.parse(JSON.stringify(LEVELS[idx]));
+  P.x=240;P.y=280;pendingAdvance=false;touchTarget=null;keys={};interactGrace=180;
+  document.getElementById('level-label').textContent='LV '+(idx+1);
+  updateXPBar();
+  document.getElementById('intro-emoji').textContent=levelData.emoji;
+  document.getElementById('intro-title').textContent=levelData.name;
+  document.getElementById('intro-sub').textContent=levelData.sub;
+  document.getElementById('intro-body').textContent=levelData.intro;
+  showOv('ov-intro');
+}
+
+function closeIntro(){touchTarget=null;keys={};interactGrace=60;hideOv();}
+
+function checkInteract(){
+  if(!levelData) return;
+  if(interactGrace>0){interactGrace--;return;}
+  levelData.objects.forEach(obj=>{
+    if(isNear(obj)){
+      if(obj.advance&&!pendingAdvance){
+        pendingAdvance=true;
+        if(currentLevel<LEVELS.length-1) showLevelUp();
+        else showBoss();
+      } else if(obj.dialog&&!obj._done&&!obj._open){
+        obj._open=true;openDialog(obj);
+      }
+    }
+    if(!isNear(obj)&&obj._open&&!obj._done) obj._open=false;
+  });
+}
+
+function openDialog(obj){
+  const d=obj.dialog;
+  document.getElementById('dlg-name').textContent=d.name;
+  document.getElementById('dlg-content').innerHTML=d.content;
+  const cc=document.getElementById('dlg-choices');cc.innerHTML='';
+  d.choices.forEach((ch,i)=>{
+    const b=document.createElement('button');b.className='choice-btn';
+    b.textContent=(i===0?'A. ':'B. ')+ch.text;
+    b.onclick=()=>resolveChoice(obj,ch);cc.appendChild(b);
+  });
+  showOv('ov-dialog');
+}
+
+function resolveChoice(obj,ch){
+  obj._done=true;hideOv();
+  if(ch.isFollow===true){openFollowDialog(obj);return;}
+  showResult(ch,'');
+}
+
+function openFollowDialog(obj){
+  document.getElementById('dlg-name').textContent='JARED JEWELERS — CLIENT TEAMS CALL';
+  document.getElementById('dlg-content').innerHTML=FOLLOW_DIALOG.content;
+  const cc=document.getElementById('dlg-choices');cc.innerHTML='';
+  FOLLOW_DIALOG.choices.forEach((ch,i)=>{
+    const b=document.createElement('button');b.className='choice-btn';
+    b.textContent=(i===0?'A. ':'B. ')+ch.text;
+    b.onclick=()=>{obj._done=true;hideOv();showResult(ch,'');};
+    cc.appendChild(b);
+  });
+  showOv('ov-dialog');
+}
+
+function showResult(ch,extraHtml){
+  if(ch.xp>0) addXP(ch.xp);
+  if(ch.skill) skills.push(ch.skill);
+  document.getElementById('res-icon').textContent=ch.bad?'💭':'✅';
+  document.getElementById('res-text').innerHTML=ch.bad
+    ?`<div class="result-bad">NOT QUITE.</div><div class="sub">${ch.feedback}</div>`
+    :`<div class="result-good">CORRECT CALL!</div><div class="sub">${ch.feedback}</div>`;
+  document.getElementById('res-xp').textContent=ch.xp>0?(ch.bad?'':'+')+ch.xp+' XP'+(ch.bad?' (partial)':''):'';
+  document.getElementById('res-extra').innerHTML=extraHtml;
+  showOv('ov-result');
+}
+
+function closeResult(){hideOv();}
+
+function showLevelUp(){
+  const next=LEVELS[currentLevel+1];
+  document.getElementById('lu-text').innerHTML=`<div style="color:#5aff5a;margin-bottom:6px">LEVEL ${currentLevel+1} COMPLETE!</div><div style="margin-bottom:6px">${next.emoji} NEXT: ${next.name}</div><div style="color:#a0a0cc">${next.intro}</div>`;
+  showOv('ov-levelup');
+}
+
+function advanceLevel(){touchTarget=null;keys={};hideOv();loadLevel(currentLevel+1);}
+
+const BMOVES={
+  exp:{dmg:[28,35],hit:"7+ years spanning copy, production & social! Boss is visibly impressed. CRITICAL HIT!",miss:"'But have you done live experiential at scale?' Boss sidesteps."},
+  budget:{dmg:[22,30],hit:"$3M monthly across 6 brands! The numbers don't lie. Boss staggers!",miss:"Numbers alone aren't enough. Boss wants vision."},
+  client:{dmg:[25,32],hit:"Multi-brand portfolio onboarding from scratch? Boss can't argue with that!",miss:"Boss wants depth, not just names."},
+  vision:{dmg:[30,38],hit:"A clear, bold vision for experiences that move audiences AND drive ROI. DEVASTATING BLOW!",miss:"Too vague — sharpen the pitch!"}
+};
+
+function showBoss(){
+  bossHP=100;heroHP=100;bossRound=0;updateBossUI();
+  document.getElementById('boss-msg').textContent="You've leveled through 5 jobs. Now prove you deserve the role.";
+  document.getElementById('boss-log').textContent='';showOv('ov-boss');
+}
+
+function updateBossUI(){
+  document.getElementById('boss-bar').style.width=bossHP+'%';
+  document.getElementById('boss-hp-txt').textContent=bossHP;
+  document.getElementById('hero-bar').style.width=heroHP+'%';
+  document.getElementById('hero-hp-txt').textContent=heroHP;
+}
+
+function bossMove(type){
+  if(bossHP<=0||heroHP<=0) return;
+  bossRound++;
+  const m=BMOVES[type],hit=Math.random()>0.3;
+  const dmg=hit?m.dmg[0]+Math.floor(Math.random()*(m.dmg[1]-m.dmg[0])):0;
+  if(hit){bossHP=Math.max(0,bossHP-dmg);document.getElementById('boss-msg').textContent=m.hit;}
+  else{heroHP=Math.max(0,heroHP-14);document.getElementById('boss-msg').textContent=m.miss+' Counter! -14 HP';}
+  document.getElementById('boss-log').textContent='Round '+bossRound+(hit?': -'+dmg+' HP to Hiring Mgr':': MISS — counter-attack -14 HP');
+  updateBossUI();
+  if(bossHP<=0) setTimeout(showStats,700);
+  else if(heroHP<=0) setTimeout(()=>{bossHP=100;heroHP=100;bossRound=0;updateBossUI();document.getElementById('boss-msg').textContent="Down but not out. Keep going!";document.getElementById('boss-log').textContent='';},2000);
+}
+
+function showStats(){
+  showOv('ov-stats');
+  const company = COMPANY_NAME || 'Your Company';
+  document.getElementById('stats-list').innerHTML=[
+    {k:'TOTAL XP',v:totalXP+' XP'},{k:'LEVELS CLEARED',v:'5 / 5'},
+    {k:'BOSS DEFEATED',v:'✓ YES'},{k:'HIRE-READY',v:'✓ CONFIRMED'},
+    {k:'YEARS EXP',v:'7+'},{k:'BUDGET MANAGED',v:'$3M/MO'},
+  ].map(s=>`<div class="stat-row"><span>${s.k}</span><span class="stat-v">${s.v}</span></div>`).join('');
+  document.getElementById('badges-out').innerHTML=skills.map(s=>`<span class="badge">${s}</span>`).join('');
+}
+
+function movePlayer(dt){
+  let dx=0,dy=0;
+  if(keys['ArrowUp']||keys['w']||keys['W']||keys['dp_up']) dy=-1;
+  if(keys['ArrowDown']||keys['s']||keys['S']||keys['dp_down']) dy=1;
+  if(keys['ArrowLeft']||keys['a']||keys['A']||keys['dp_left']) dx=-1;
+  if(keys['ArrowRight']||keys['d']||keys['D']||keys['dp_right']) dx=1;
+  if(touchTarget&&dx===0&&dy===0){
+    const ddx=touchTarget.x-P.x,ddy=touchTarget.y-P.y,dist=Math.sqrt(ddx*ddx+ddy*ddy);
+    if(dist>6){dx=ddx/dist;dy=ddy/dist;}else touchTarget=null;
+  }
+  if(dx!==0||dy!==0){
+    P.ft++;if(P.ft>8){P.frame=(P.frame+1)%4;P.ft=0;}
+    const spd=P.speed*dt,nx=P.x+dx*spd,ny=P.y+dy*spd;
+    if(!collides(nx,P.y)) P.x=nx;
+    if(!collides(P.x,ny)) P.y=ny;
+  }
+}
+
+function render(){
+  ctx.clearRect(0,0,W,H);
+  if(!levelData) return;
+  drawRoom();drawObjects();drawPlayer();
+  if(!document.querySelector('.overlay.active')){
+    ctx.fillStyle='rgba(90,90,255,0.65)';ctx.font='5px "Press Start 2P"';ctx.textAlign='center';
+    ctx.fillText('WALK INTO GLOWING OBJECTS TO INTERACT',W/2,H-5);ctx.textAlign='left';
+  }
+}
+
+let last=0;
+function loop(ts){
+  const dt=Math.min((ts-last)/16,3);last=ts;
+  if(levelData&&!document.querySelector('.overlay.active')){movePlayer(dt);checkInteract();}
+  render();requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
