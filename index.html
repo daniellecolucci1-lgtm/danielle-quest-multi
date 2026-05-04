@@ -176,25 +176,18 @@ h2{font-size:7px;color:#ffe066;margin-bottom:10px}
     <div style="width:100%;margin:8px 0">
       <div class="stat-row"><span>EMAIL</span><span class="stat-v" style="font-size:5px">daniellecolucci1@gmail.com</span></div>
       <div class="stat-row"><span>PHONE</span><span class="stat-v">317-764-6086</span></div>
-      <div class="stat-row"><span>LINKEDIN</span><span class="stat-v" style="font-size:5px">linkedin.com/in/danielle-colucci-75150353</span></div>
+      <div class="stat-row"><span>LINKEDIN</span><span class="stat-v" style="font-size:5px">linkedin.com/in/daniellecolucci</span></div>
     </div>
     <div class="sub" style="margin:8px 0">Ready to concept, produce, and deliver<br>memorable experiences that drive ROI<br>for the brand and the audience.<br><span style="color:#ffe066">The quest starts at Your Company.</span></div>
     <button class="btn g" onclick="location.reload()">↩ PLAY AGAIN</button>
   </div>
 </div>
-</div><!-- /wrapper -->
+</div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════
-//  CUSTOMIZE FOR A SPECIFIC APPLICATION — change these 2 lines:
-//    COMPANY_NAME: e.g. "Waymo" — shows on hire screen finale
-//    ROLE_TITLE:   e.g. "Experiential Marketing Manager"
-//  For the generic version, leave both as empty strings "".
-// ═══════════════════════════════════════════════════════════════
 const COMPANY_NAME = "";
 const ROLE_TITLE   = "";
 
-// ── Auto-patch hire screen if company/role provided ──
 window.addEventListener('DOMContentLoaded', () => {
   if (COMPANY_NAME) {
     document.querySelector('#ov-hire .sub:last-of-type').innerHTML =
@@ -210,10 +203,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
 const C=document.getElementById('c'),ctx=C.getContext('2d');
 const W=480,H=480,TS=32;
-
 let xp=0,totalXP=0,currentLevel=0,bossHP=100,heroHP=100,bossRound=0,skills=[];
 const XP_MAX=400;
-
 let P={x:240,y:280,speed:2.4,frame:0,ft:0,dir:1};
 let keys={},touchTarget=null,pendingAdvance=false,levelData=null;
 
@@ -710,7 +701,6 @@ function bossMove(type){
 
 function showStats(){
   showOv('ov-stats');
-  const company = COMPANY_NAME || 'Your Company';
   document.getElementById('stats-list').innerHTML=[
     {k:'TOTAL XP',v:totalXP+' XP'},{k:'LEVELS CLEARED',v:'5 / 5'},
     {k:'BOSS DEFEATED',v:'✓ YES'},{k:'HIRE-READY',v:'✓ CONFIRMED'},
